@@ -78,7 +78,7 @@ server_transfer(From, To, Message) ->
 	case mnesia:transaction(F) of 
 		{atomic, not_logged_on} -> 
 			From ! {server, stop, not_logged_on};
-		{atomic, receiver_not_fouind} ->
+		{atomic, receiver_not_found} ->
 			From ! {server, receiver_not_found};
 		{atomic, sent} ->
 			From ! {server, sent}

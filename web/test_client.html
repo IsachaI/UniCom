@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UniCom test client</title>
+<style>
+  body { font-family: monospace; max-width: 600px; margin: 40px auto; padding: 0 16px; }
+  #status { font-weight: bold; }
+  #status.connected { color: green; }
+  #status.disconnected { color: red; }
+  #log { border: 1px solid #ccc; height: 300px; overflow-y: auto; padding: 8px; margin: 12px 0; background: #f7f7f7; }
+  #log div { margin-bottom: 4px; }
+  .in { color: blue; }
+  .out { color: #555; }
+  .err { color: red; }
+  input { font-family: monospace; padding: 4px; }
+  button { font-family: monospace; padding: 4px 10px; }
+  label { display: inline-block; width: 90px; }
+  .row { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<h2>UniCom test client</h2>
+<div>Status: <span id="status" class="disconnected">disconnected</span></div>
+
+<div class="row">
+  <label>Server URL</label>
+  <input id="url" value="ws://localhost:8080/ws" size="30">
+  <button id="connectBtn">Connect</button>
+</div>
+
+<div class="row">
+  <label>Your name</label>
+  <input id="name" placeholder="alice">
+  <button id="logonBtn">Logon</button>
+</div>
+
+<div class="row">
+  <label>Send to</label>
+  <input id="to" placeholder="bob">
+</div>
+<div class="row">
+  <label>Message</label>
+  <input id="text" placeholder="hello" size="30">
+  <button id="sendBtn">Send</button>
+</div>
+
+<div id="log"></div>
+
+<script>
+let ws = null;
+
+const statusEl = document.getElementById('status');
+const logEl = document.getElementById('log');
+
+function log(msg, cls) {
+  const div = document.createElement('div');
+  div.className = cls || '';
+  div.textContent = msg;
+  logEl.appendChild(div);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(connected) {
+  statusEl.textContent = connected ? 'connected' : 'disconnected';
+  statusEl.className = connected ? 'connected' : 'disconnected';
+}
+
+document.getElementById('connectBtn').onclick = () => {
+  const url = document.getElementById('url').value;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    setStatus(true);
+    log('connected to ' + url, 'out');
+  };
+
+  ws.onclose = (e) => {
+    setStatus(false);
+    log('disconnected (code ' + e.code + ')', 'err');
+  };
+
+  ws.onerror = () => {
+    log('connection error', 'err');
+  };
+
+  ws.onmessage = (e) => {
+    log('received: ' + e.data, 'in');
+  };
+};
+
+document.getElementById('logonBtn').onclick = () => {
+  if (!ws || ws.readyState !== 1) { log('not connected', 'err'); return; }
+  const name = document.getElementById('name').value.trim();
+  if (!name) { log('enter a name first', 'err'); return; }
+  const payload = JSON.stringify({ action: 'logon', name: name });
+  ws.send(payload);
+  log('sent: ' + payload, 'out');
+};
+
+document.getElementById('sendBtn').onclick = () => {
+  if (!ws || ws.readyState !== 1) { log('not connected', 'err'); return; }
+  const to = document.getElementById('to').value.trim();
+  const text = document.getElementById('text').value;
+  if (!to) { log('enter a recipient first', 'err'); return; }
+  const payload = JSON.stringify({ action: 'message', to: to, text: text });
+  ws.send(payload);
+  log('sent: ' + payload, 'out');
+  document.getElementById('text').value = '';
+};
+</script>
+
+</body>
+</html>
